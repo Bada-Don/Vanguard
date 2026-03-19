@@ -97,7 +97,7 @@ Implement emergency payload generation with GPS collection and validation.
 ## Phase 4: Platform-Specific Nearby Service
 
 ### Task 4.1: Android Nearby Connections Implementation
-**Status:** pending
+**Status:** completed
 **Assigned to:** Unassigned
 **Priority:** high
 
@@ -124,6 +124,7 @@ Implement Android native code for Nearby Connections API using P2P_CLUSTER strat
 **Status:** pending
 **Assigned to:** Unassigned
 **Priority:** high
+**Note:** iOS implementation requires Swift/Objective-C development and physical iOS devices for testing. Template provided for future implementation.
 
 **Description:**
 Implement iOS native code for MultipeerConnectivity framework.
@@ -145,7 +146,7 @@ Implement iOS native code for MultipeerConnectivity framework.
 ---
 
 ### Task 4.3: Unified Dart Nearby Service Interface
-**Status:** pending
+**Status:** completed
 **Assigned to:** Unassigned
 **Priority:** high
 
