@@ -20,14 +20,26 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final service = ConnectivityStatusService();
-    return BlocBuilder<EmergencySOSDashboardBloc, EmergencySOSDashboardState>(
+    return BlocConsumer<EmergencySOSDashboardBloc, EmergencySOSDashboardState>(
+      listener: (context, state) {
+        if (state is SOSSuccessState) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('SOS payload transmitted to local mesh.'), backgroundColor: appTheme.color33EC5B),
+          );
+        } else if (state is SOSErrorState) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.errorMessage ?? 'Transmission failed'), backgroundColor: appTheme.red_700),
+          );
+        }
+      },
       builder: (context, state) {
         return ListenableBuilder(
           listenable: service,
           builder: (context, _) {
+            final bool isTransmitting = state is SOSTriggeredState || state is SOSTransmittingState;
             return ConnectivitySpinnerOverlay(
-              visible: service.isLoading,
-              message: 'Initializing mesh network...',
+              visible: service.isLoading || isTransmitting,
+              message: isTransmitting ? 'Transmitting emergency payload...' : 'Initializing mesh network...',
               child: Scaffold(
                 backgroundColor: appTheme.black_900_01,
                 appBar: _buildAppBar(context),
@@ -46,7 +58,7 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
                           padding: EdgeInsets.fromLTRB(16.h, 16.h, 16.h, 0),
                           child: Column(
                             children: [
-                              _buildStatusCards(context),
+                              _buildStatusCards(context, state),
                               SizedBox(height: 32.h),
                               _buildSOSButton(context),
                               SizedBox(height: 32.h),
@@ -83,18 +95,18 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusCards(BuildContext context) {
+  Widget _buildStatusCards(BuildContext context, EmergencySOSDashboardState state) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: _buildConnectivityCard(context)),
+        Expanded(child: _buildConnectivityCard(context, state)),
         SizedBox(width: 12.h),
-        Expanded(child: _buildMeshNodesCard(context)),
+        Expanded(child: _buildMeshNodesCard(context, state)),
       ],
     );
   }
 
-  Widget _buildConnectivityCard(BuildContext context) {
+  Widget _buildConnectivityCard(BuildContext context, EmergencySOSDashboardState state) {
     return Container(
       padding: EdgeInsets.all(16.h),
       decoration: BoxDecoration(
@@ -123,7 +135,7 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Online',
+            state.connectivityStatus,
             style: TextStyleHelper.instance.title18Bold,
             overflow: TextOverflow.ellipsis,
           ),
@@ -141,7 +153,7 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
     );
   }
 
-  Widget _buildMeshNodesCard(BuildContext context) {
+  Widget _buildMeshNodesCard(BuildContext context, EmergencySOSDashboardState state) {
     return Container(
       padding: EdgeInsets.all(16.h),
       decoration: BoxDecoration(
@@ -170,7 +182,7 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            '8 Active',
+            '${state.meshNodesCount} Active',
             style: TextStyleHelper.instance.title18Bold.copyWith(
               color: appTheme.deep_orange_600,
             ),
@@ -212,7 +224,6 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Outermost glow ring
               Container(
                 width: 300.h,
                 height: 300.h,
@@ -231,7 +242,6 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
                   ],
                 ),
               ),
-              // Middle ring
               Container(
                 width: 250.h,
                 height: 250.h,
@@ -243,7 +253,6 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
                   ),
                 ),
               ),
-              // Inner ring
               Container(
                 width: 200.h,
                 height: 200.h,
@@ -255,7 +264,6 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
                   ),
                 ),
               ),
-              // Main SOS button
               GestureDetector(
                 onLongPress: () {
                   context.read<EmergencySOSDashboardBloc>().add(
@@ -320,7 +328,7 @@ class EmergencySOSDashboardInitialPage extends StatelessWidget {
         Text('Emergency Trigger', style: TextStyleHelper.instance.title20Bold),
         SizedBox(height: 6.h),
         Text(
-          'Hold for 3 seconds to broadcast emergency\nsignal to all nearby nodes and authorities.',
+          'Hold for 3 seconds to select category and broadcast emergency\nsignal to all nearby nodes and authorities.',
           textAlign: TextAlign.center,
           style: TextStyleHelper.instance.body14Regular.copyWith(height: 1.5),
         ),

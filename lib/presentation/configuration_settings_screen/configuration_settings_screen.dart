@@ -8,6 +8,7 @@ import '../../widgets/custom_edit_text.dart';
 import '../../widgets/custom_switch.dart';
 import './bloc/configuration_settings_bloc.dart';
 import './models/configuration_settings_model.dart';
+import 'package:vanguard_crisis_response/core/models/mesh_network_config.dart';
 
 class ConfigurationSettingsScreen extends StatelessWidget {
   ConfigurationSettingsScreen({Key? key}) : super(key: key);
@@ -29,7 +30,18 @@ class ConfigurationSettingsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: appTheme.gray_900_04,
       appBar: _buildAppBar(context),
-      body: BlocBuilder<ConfigurationSettingsBloc, ConfigurationSettingsState>(
+      body: BlocConsumer<ConfigurationSettingsBloc, ConfigurationSettingsState>(
+        listener: (context, state) {
+          if (state.validationError != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.validationError!),
+                backgroundColor: appTheme.red_700,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        },
         builder: (context, state) {
           return ListenableBuilder(
             listenable: service,
@@ -48,11 +60,13 @@ class ConfigurationSettingsScreen extends StatelessWidget {
                     ),
                     Expanded(
                       child: SingleChildScrollView(
+                        padding: EdgeInsets.only(bottom: 32.h),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildUserInformationSection(context, state),
                             _buildHardwareConfigSection(context, state),
+                            _buildMeshParametersSection(context, state),
                             _buildPowerManagementSection(context, state),
                           ],
                         ),
@@ -251,6 +265,158 @@ class ConfigurationSettingsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildMeshParametersSection(
+    BuildContext context,
+    ConfigurationSettingsState state,
+  ) {
+    final cfg = state.meshNetworkConfig;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: appTheme.color19EC5B, width: 1.h),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(16.h, 22.h, 16.h, 24.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'MESH PARAMETERS',
+                style: TextStyleHelper.instance.body14BoldPublicSans.copyWith(
+                  letterSpacing: 1.0,
+                  height: 1.21,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.read<ConfigurationSettingsBloc>().add(ResetConfigurationEvent()),
+                child: Text(
+                  'Reset Defaults',
+                  style: TextStyleHelper.instance.body12BoldPublicSans.copyWith(
+                    color: appTheme.deep_orange_600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          _buildSliderItem(
+            context: context,
+            label: 'Max Relay Hops',
+            description: 'Maximum times a message is relayed (3–5)',
+            value: cfg.maxHops.toDouble(),
+            min: 3,
+            max: 5,
+            divisions: 2,
+            displayValue: '${cfg.maxHops}',
+            onChanged: (v) => context.read<ConfigurationSettingsBloc>()
+                .add(UpdateMaxHopsEvent(maxHops: v.round())),
+          ),
+          SizedBox(height: 16.h),
+          _buildSliderItem(
+            context: context,
+            label: 'Message Queue Size',
+            description: 'Maximum queued messages (50–200)',
+            value: cfg.messageQueueSize.toDouble(),
+            min: 50,
+            max: 200,
+            divisions: 15,
+            displayValue: '${cfg.messageQueueSize}',
+            onChanged: (v) => context.read<ConfigurationSettingsBloc>()
+                .add(UpdateMessageQueueSizeEvent(size: v.round())),
+          ),
+          SizedBox(height: 16.h),
+          _buildSliderItem(
+            context: context,
+            label: 'Uplink Retry Attempts',
+            description: 'Max retry attempts when uploading (1–5)',
+            value: cfg.uplinkRetryAttempts.toDouble(),
+            min: 1,
+            max: 5,
+            divisions: 4,
+            displayValue: '${cfg.uplinkRetryAttempts}',
+            onChanged: (v) => context.read<ConfigurationSettingsBloc>()
+                .add(UpdateUplinkRetriesEvent(retries: v.round())),
+          ),
+          SizedBox(height: 16.h),
+          _buildSliderItem(
+            context: context,
+            label: 'Connection Timeout',
+            description: 'Peer connection timeout in seconds (10–60s)',
+            value: cfg.connectionTimeout.toDouble(),
+            min: 10,
+            max: 60,
+            divisions: 10,
+            displayValue: '${cfg.connectionTimeout}s',
+            onChanged: (v) => context.read<ConfigurationSettingsBloc>()
+                .add(UpdateConnectionTimeoutEvent(timeout: v.round())),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSliderItem({
+    required BuildContext context,
+    required String label,
+    required String description,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String displayValue,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12.h),
+        border: Border.all(color: appTheme.color33EC5B, width: 1.h),
+        boxShadow: [
+          BoxShadow(color: appTheme.color33EC5B, blurRadius: 2.h),
+        ],
+      ),
+      padding: EdgeInsets.all(16.h),
+      margin: EdgeInsets.only(right: 8.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: TextStyleHelper.instance.title16SemiBoldPublicSans),
+              Text(
+                displayValue,
+                style: TextStyleHelper.instance.title16BoldPublicSans.copyWith(
+                  color: appTheme.deep_orange_600,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4.h),
+          Text(description, style: TextStyleHelper.instance.body12RegularPublicSans),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: appTheme.deep_orange_600,
+              inactiveTrackColor: appTheme.blue_gray_800,
+              thumbColor: appTheme.deep_orange_600,
+              overlayColor: appTheme.deep_orange_600.withAlpha(30),
+              trackHeight: 4.h,
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPowerManagementSection(
     BuildContext context,
     ConfigurationSettingsState state,
@@ -317,11 +483,7 @@ class ConfigurationSettingsScreen extends StatelessWidget {
                   child: FractionallySizedBox(
                     alignment: Alignment.centerLeft,
                     widthFactor:
-                        (state
-                                .configurationSettingsModel
-                                ?.criticalPowerThreshold ??
-                            10) /
-                        100,
+                        (state.configurationSettingsModel?.criticalPowerThreshold ?? 10) / 100,
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(4.h),

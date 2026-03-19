@@ -9,6 +9,8 @@ import '../../widgets/custom_edit_text.dart';
 import '../../widgets/custom_image_view.dart';
 import './bloc/emergency_category_selection_bloc.dart';
 import './models/emergency_category_selection_model.dart';
+import '../../presentation/emergency_sos_dashboard_screen/bloc/emergency_sos_dashboard_bloc.dart';
+import 'package:vanguard_crisis_response/core/models/emergency_payload.dart';
 
 class EmergencyCategorySelectionScreen extends StatelessWidget {
   EmergencyCategorySelectionScreen({Key? key}) : super(key: key);
@@ -30,16 +32,23 @@ class EmergencyCategorySelectionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: appTheme.gray_900,
       body:
-          BlocConsumer<
-            EmergencyCategorySelectionBloc,
-            EmergencyCategorySelectionState
-          >(
-            listener: (context, state) {
-              if (state.isSubmitSuccess ?? false) {
-                NavigatorService.pushNamed(AppRoutes.sOSBroadcastingScreen);
-              }
-            },
-            builder: (context, state) {
+        BlocConsumer<EmergencyCategorySelectionBloc, EmergencyCategorySelectionState>(
+          listener: (context, state) {
+            if (state.isSubmitSuccess ?? false) {
+              final typeMapping = {
+                'medical': 1,
+                'fire': 2,
+                'search_rescue': 4,
+                'supplies': 6,
+                'danger': 3,
+                'other': 6,
+              };
+              final typeId = typeMapping[state.selectedCategory ?? 'other'] ?? 6;
+              context.read<EmergencySOSDashboardBloc>().add(TriggerSOSEvent(emergencyType: typeId));
+              NavigatorService.goBack();
+            }
+          },
+          builder: (context, state) {
               return ListenableBuilder(
                 listenable: service,
                 builder: (context, _) {

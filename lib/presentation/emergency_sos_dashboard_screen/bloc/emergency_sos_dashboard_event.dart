@@ -9,6 +9,15 @@ class EmergencySOSDashboardInitialEvent extends EmergencySOSDashboardEvent {}
 
 class InitializeSOSEvent extends EmergencySOSDashboardEvent {}
 
+class TriggerSOSEvent extends EmergencySOSDashboardEvent {
+  final int emergencyType;
+  
+  TriggerSOSEvent({required this.emergencyType});
+  
+  @override
+  List<Object?> get props => [emergencyType];
+}
+
 class UpdateConnectivityStatusEvent extends EmergencySOSDashboardEvent {
   final String status;
 

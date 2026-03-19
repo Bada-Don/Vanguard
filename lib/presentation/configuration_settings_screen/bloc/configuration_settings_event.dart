@@ -53,3 +53,33 @@ class UpdateEmergencyContactEvent extends ConfigurationSettingsEvent {
   @override
   List<Object?> get props => [emergencyContact];
 }
+
+class UpdateMaxHopsEvent extends ConfigurationSettingsEvent {
+  final int maxHops;
+  UpdateMaxHopsEvent({required this.maxHops});
+  @override
+  List<Object?> get props => [maxHops];
+}
+
+class UpdateMessageQueueSizeEvent extends ConfigurationSettingsEvent {
+  final int size;
+  UpdateMessageQueueSizeEvent({required this.size});
+  @override
+  List<Object?> get props => [size];
+}
+
+class UpdateUplinkRetriesEvent extends ConfigurationSettingsEvent {
+  final int retries;
+  UpdateUplinkRetriesEvent({required this.retries});
+  @override
+  List<Object?> get props => [retries];
+}
+
+class UpdateConnectionTimeoutEvent extends ConfigurationSettingsEvent {
+  final int timeout;
+  UpdateConnectionTimeoutEvent({required this.timeout});
+  @override
+  List<Object?> get props => [timeout];
+}
+
+class ResetConfigurationEvent extends ConfigurationSettingsEvent {}

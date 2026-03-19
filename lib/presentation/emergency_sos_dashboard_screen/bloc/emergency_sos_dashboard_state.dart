@@ -9,6 +9,7 @@ class EmergencySOSDashboardState extends Equatable {
   final int meshNodesCount;
   final String sectorInfo;
   final DateTime? sosActivationTime;
+  final String? errorMessage;
 
   EmergencySOSDashboardState({
     this.emergencySOSDashboardModelObj,
@@ -19,6 +20,7 @@ class EmergencySOSDashboardState extends Equatable {
     this.meshNodesCount = 0,
     this.sectorInfo = 'SECTOR 7-G • LOW ALERT',
     this.sosActivationTime,
+    this.errorMessage,
   });
 
   @override
@@ -31,6 +33,7 @@ class EmergencySOSDashboardState extends Equatable {
     meshNodesCount,
     sectorInfo,
     sosActivationTime,
+    errorMessage,
   ];
 
   EmergencySOSDashboardState copyWith({
@@ -42,6 +45,7 @@ class EmergencySOSDashboardState extends Equatable {
     int? meshNodesCount,
     String? sectorInfo,
     DateTime? sosActivationTime,
+    String? errorMessage,
   }) {
     return EmergencySOSDashboardState(
       emergencySOSDashboardModelObj:
@@ -53,6 +57,63 @@ class EmergencySOSDashboardState extends Equatable {
       meshNodesCount: meshNodesCount ?? this.meshNodesCount,
       sectorInfo: sectorInfo ?? this.sectorInfo,
       sosActivationTime: sosActivationTime ?? this.sosActivationTime,
+      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
+}
+
+class SOSTriggeredState extends EmergencySOSDashboardState {
+  SOSTriggeredState(EmergencySOSDashboardState state) : super(
+    emergencySOSDashboardModelObj: state.emergencySOSDashboardModelObj,
+    isLoading: state.isLoading,
+    isSOSActivating: state.isSOSActivating,
+    isSOSActive: true,
+    connectivityStatus: state.connectivityStatus,
+    meshNodesCount: state.meshNodesCount,
+    sectorInfo: state.sectorInfo,
+    sosActivationTime: state.sosActivationTime,
+    errorMessage: state.errorMessage,
+  );
+}
+
+class SOSTransmittingState extends EmergencySOSDashboardState {
+  SOSTransmittingState(EmergencySOSDashboardState state) : super(
+    emergencySOSDashboardModelObj: state.emergencySOSDashboardModelObj,
+    isLoading: state.isLoading,
+    isSOSActivating: true,
+    isSOSActive: true,
+    connectivityStatus: state.connectivityStatus,
+    meshNodesCount: state.meshNodesCount,
+    sectorInfo: state.sectorInfo,
+    sosActivationTime: state.sosActivationTime,
+    errorMessage: state.errorMessage,
+  );
+}
+
+class SOSSuccessState extends EmergencySOSDashboardState {
+  SOSSuccessState(EmergencySOSDashboardState state) : super(
+    emergencySOSDashboardModelObj: state.emergencySOSDashboardModelObj,
+    isLoading: state.isLoading,
+    isSOSActivating: false,
+    isSOSActive: true,
+    connectivityStatus: state.connectivityStatus,
+    meshNodesCount: state.meshNodesCount,
+    sectorInfo: state.sectorInfo,
+    sosActivationTime: state.sosActivationTime,
+    errorMessage: null,
+  );
+}
+
+class SOSErrorState extends EmergencySOSDashboardState {
+  SOSErrorState(EmergencySOSDashboardState state, String error) : super(
+    emergencySOSDashboardModelObj: state.emergencySOSDashboardModelObj,
+    isLoading: false,
+    isSOSActivating: false,
+    isSOSActive: state.isSOSActive,
+    connectivityStatus: state.connectivityStatus,
+    meshNodesCount: state.meshNodesCount,
+    sectorInfo: state.sectorInfo,
+    sosActivationTime: state.sosActivationTime,
+    errorMessage: error,
+  );
 }

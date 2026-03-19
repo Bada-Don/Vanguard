@@ -198,6 +198,8 @@ class PassiveNodeDashboardScreen extends StatelessWidget {
         children: [
           _buildMetricsRow(context, state),
           SizedBox(height: 16.h),
+          _buildLiveStatsSection(context, state),
+          SizedBox(height: 16.h),
           _buildEnergyImpactCard(context, state),
           SizedBox(height: 16.h),
           _buildNetworkMapSection(context, state),
@@ -257,7 +259,7 @@ class PassiveNodeDashboardScreen extends StatelessWidget {
               ],
             ),
             Text(
-              '1,284',
+              '${state.processedMessagesCount}',
               style: TextStyleHelper.instance.headline30BoldPublicSans,
             ),
             Padding(
@@ -314,7 +316,7 @@ class PassiveNodeDashboardScreen extends StatelessWidget {
             ],
           ),
           Text(
-            '18h 42m',
+            state.connectedEndpointsCount > 0 ? '18h 42m' : '0h 0m',
             style: TextStyleHelper.instance.headline30BoldPublicSans,
           ),
           Padding(
@@ -337,6 +339,54 @@ class PassiveNodeDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLiveStatsSection(
+    BuildContext context,
+    PassiveNodeDashboardState state,
+  ) {
+    return Padding(
+      padding: EdgeInsets.only(right: 8.h),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16.h),
+        decoration: BoxDecoration(
+          color: appTheme.color1919EC,
+          border: Border.all(color: appTheme.color3333EC, width: 1.h),
+          borderRadius: BorderRadius.circular(12.h),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'LIVE RELAY STATUS',
+              style: TextStyleHelper.instance.body12SemiBoldPublicSans.copyWith(letterSpacing: 1.0),
+            ),
+            SizedBox(height: 12.h),
+            _buildStatRow('Queued Messages', '${state.queuedMessagesCount}'),
+            SizedBox(height: 8.h),
+            _buildStatRow('Last Relay', state.lastRelayTimestamp ?? '–'),
+            SizedBox(height: 8.h),
+            _buildStatRow('Last Uplink', state.lastUplinkTimestamp ?? '–'),
+            SizedBox(height: 8.h),
+            _buildStatRow('Relay Mode', state.isRelayModeEnabled ? 'Active' : 'Suspended'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyleHelper.instance.body12RegularPublicSans),
+        Text(
+          value,
+          style: TextStyleHelper.instance.body12SemiBoldPublicSans.copyWith(color: appTheme.deep_orange_600),
+        ),
+      ],
     );
   }
 
@@ -488,16 +538,16 @@ class PassiveNodeDashboardScreen extends StatelessWidget {
                   SizedBox(height: 76.h),
                   Text(
                     'NETWORK MAP',
-                    style: TextStyleHelper.instance.label10BoldPublicSans
-                        .copyWith(
-                          color: appTheme.deep_orange_600,
-                          letterSpacing: 1.h,
-                        ),
+                    style: TextStyleHelper.instance.label10BoldPublicSans.copyWith(
+                      color: appTheme.deep_orange_600,
+                      letterSpacing: 1.h,
+                    ),
                   ),
                   Text(
-                    '14 Active Peer Nodes Connected',
-                    style: TextStyleHelper.instance.body14MediumPublicSans
-                        .copyWith(color: appTheme.white_A700),
+                    state.connectedEndpointsCount > 0
+                        ? '${state.connectedEndpointsCount} Active Peer Node${state.connectedEndpointsCount == 1 ? '' : 's'} Connected'
+                        : '14 Active Peer Nodes Connected',
+                    style: TextStyleHelper.instance.body14MediumPublicSans.copyWith(color: appTheme.white_A700),
                   ),
                 ],
               ),

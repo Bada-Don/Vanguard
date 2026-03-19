@@ -17,3 +17,5 @@ class ToggleSuspendNodeEvent extends PassiveNodeDashboardEvent {
   @override
   List<Object?> get props => [value];
 }
+
+class RefreshRelayStatsEvent extends PassiveNodeDashboardEvent {}
