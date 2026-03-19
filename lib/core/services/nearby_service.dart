@@ -42,6 +42,7 @@ class NearbyService {
   final List<Uint8List> _payloadQueue = [];
   
   bool _isInitialized = false;
+  String? _lastUserName;
 
   NearbyService({Logger? logger}) : _logger = logger ?? Logger() {
     _initializeEventChannels();
@@ -187,6 +188,7 @@ class NearbyService {
   /// Start mesh networking (advertising and discovery)
   Future<bool> startMeshNetworking(String userName) async {
     try {
+      _lastUserName = userName;
       _logger.i('Starting mesh networking for user: $userName');
       
       // Start advertising
@@ -316,6 +318,9 @@ class NearbyService {
 
   /// Check if service is initialized
   bool get isInitialized => _isInitialized;
+
+  /// Get the last user name used for mesh networking
+  String? get currentUserName => _lastUserName;
 
   /// Clear payload queue
   void clearPayloadQueue() {

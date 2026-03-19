@@ -7,6 +7,8 @@ import 'package:vanguard_crisis_response/core/services/encryption_layer.dart';
 import 'package:vanguard_crisis_response/core/services/message_queue.dart';
 import 'package:vanguard_crisis_response/core/services/nearby_service.dart';
 import 'package:vanguard_crisis_response/core/services/payload_validator.dart';
+import 'package:vanguard_crisis_response/core/services/api_client.dart';
+import 'package:vanguard_crisis_response/core/services/connectivity_monitor.dart';
 
 /// Relay result types
 enum RelayResult {
@@ -29,6 +31,7 @@ class RelayStatistics {
   int validationErrors = 0;
   int decryptionErrors = 0;
   int? lastRelayTimestamp;
+  int? lastUplinkTimestamp;
 
   Map<String, dynamic> toJson() {
     return {
@@ -39,6 +42,7 @@ class RelayStatistics {
       'validationErrors': validationErrors,
       'decryptionErrors': decryptionErrors,
       'lastRelayTimestamp': lastRelayTimestamp,
+      'lastUplinkTimestamp': lastUplinkTimestamp,
     };
   }
 
@@ -48,13 +52,15 @@ class RelayStatistics {
   }
 }
 
-/// Relay manager for message reception, duplicate prevention, and multi-hop relay
+/// Relay manager for message reception, duplicate prevention, multi-hop relay and uplink
 /// Core component of mesh networking that handles message propagation
 class RelayManager {
   final EncryptionLayer _encryptionLayer;
   final PayloadValidator _payloadValidator;
   final NearbyService _nearbyService;
   final MessageQueue _messageQueue;
+  final ConnectivityMonitor _connectivityMonitor;
+  final ApiClient _apiClient;
   final MeshNetworkConfig _config;
   final Logger _logger;
 
@@ -69,19 +75,25 @@ class RelayManager {
       StreamController<Map<String, dynamic>>.broadcast();
 
   StreamSubscription<Map<String, dynamic>>? _payloadSubscription;
+  StreamSubscription<ConnectivityStatus>? _connectivitySubscription;
   bool _isInitialized = false;
+  bool _isUplinking = false;
 
   RelayManager({
     required EncryptionLayer encryptionLayer,
     required PayloadValidator payloadValidator,
     required NearbyService nearbyService,
     required MessageQueue messageQueue,
+    required ConnectivityMonitor connectivityMonitor,
+    required ApiClient apiClient,
     MeshNetworkConfig? config,
     Logger? logger,
   })  : _encryptionLayer = encryptionLayer,
         _payloadValidator = payloadValidator,
         _nearbyService = nearbyService,
         _messageQueue = messageQueue,
+        _connectivityMonitor = connectivityMonitor,
+        _apiClient = apiClient,
         _config = config ?? MeshNetworkConfig.defaultConfig,
         _logger = logger ?? Logger();
 
@@ -98,6 +110,10 @@ class RelayManager {
       if (!_messageQueue.isInitialized) {
         await _messageQueue.initialize();
       }
+      
+      if (_connectivityMonitor.currentStatus == ConnectivityStatus.none) {
+        await _connectivityMonitor.initialize();
+      }
 
       // Subscribe to payload reception from NearbyService
       _payloadSubscription = _nearbyService.payloadStream.listen(
@@ -113,12 +129,94 @@ class RelayManager {
           _logger.e('Error in payload stream: $error');
         },
       );
+      
+      // Listen to connectivity changes for uplink orchestration
+      _connectivitySubscription = _connectivityMonitor.connectivityStream.listen((status) {
+        if (status != ConnectivityStatus.none && !_isUplinking && _messageQueue.size > 0) {
+          triggerUplink();
+        }
+      });
+      
+      // Initial check for uplink
+      if (_connectivityMonitor.currentStatus != ConnectivityStatus.none && _messageQueue.size > 0) {
+        triggerUplink();
+      }
 
       _isInitialized = true;
       _logger.i('Relay manager initialized successfully');
     } catch (e) {
       _logger.e('Failed to initialize relay manager: $e');
       throw Exception('Relay manager initialization failed: $e');
+    }
+  }
+
+  /// Trigger uplink of queued messages to backend API
+  Future<void> triggerUplink() async {
+    if (_isUplinking || _messageQueue.size == 0) return;
+
+    try {
+      _isUplinking = true;
+      _logger.i('Triggering uplink. Queued messages: ${_messageQueue.size}');
+
+      // Stop ongoing mesh networking temporarily
+      await _nearbyService.stopMeshNetworking();
+
+      final int initialQueueSize = _messageQueue.size;
+      int successCount = 0;
+      int failureCount = 0;
+
+      // Extract all current messages
+      final List<EmergencyPayload> messagesToUpload = [];
+      for (int i = 0; i < initialQueueSize; i++) {
+        final payload = await _messageQueue.dequeue();
+        if (payload != null) {
+          messagesToUpload.add(payload);
+        }
+      }
+
+      for (final payload in messagesToUpload) {
+        // Attempt upload
+        final result = await _apiClient.uploadEmergencyMessage(payload);
+        
+        if (result.isSuccess) {
+          _logger.i('Successfully verified and uploaded message ${payload.id}');
+          successCount++;
+        } else {
+          _logger.w('Failed to upload message ${payload.id}, reason: ${result.error}');
+          
+          // If it's a validation error, we toss it, else re-enqueue
+          if (result.error != ApiError.validationError && result.error != ApiError.authenticationError) {
+             await _messageQueue.enqueue(payload);
+             failureCount++;
+          } else {
+             _logger.e('Message ${payload.id} rejected by backend due to client formulation error, discarding');
+             // Do not re-enqueue
+          }
+        }
+      }
+
+      _statistics.lastUplinkTimestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      _logger.i('Uplink complete. Success: $successCount, Failed (re-queued): $failureCount');
+      
+      _emitRelayEvent('uplink_completed', {
+        'successCount': successCount,
+        'failureCount': failureCount,
+      });
+
+    } catch (e) {
+      _logger.e('Uplink process failed: $e');
+    } finally {
+      // Resume mesh networking using the last known username
+      final String? userName = _nearbyService.currentUserName;
+      if (userName != null) {
+        _logger.i('Resuming mesh networking for user: $userName');
+        await _nearbyService.startMeshNetworking(userName);
+      } else {
+        _logger.w('Could not resume mesh networking: No previous user name found.');
+      }
+      
+      _isUplinking = false;
     }
   }
 
@@ -132,19 +230,6 @@ class RelayManager {
   }
 
   /// Process received encrypted payload
-  /// 
-  /// Process:
-  /// 1. Decrypt payload using EncryptionLayer
-  /// 2. Parse JSON and validate all required fields
-  /// 3. Check Message_ID against Processed_Messages_Set
-  /// 4. Discard duplicates without further processing
-  /// 5. Add new Message_IDs to Processed_Messages_Set
-  /// 6. Extract and validate hop count
-  /// 7. Check if hop < MAX_HOPS
-  /// 8. Increment hop count if relaying
-  /// 9. Re-encrypt updated payload
-  /// 10. Trigger NearbyService.sendPayload for relay
-  /// 11. Add to message queue for uplink
   Future<RelayResult> processReceivedPayload(
     Uint8List encryptedPayload, {
     String? endpointId,
@@ -275,6 +360,11 @@ class RelayManager {
         'messageId': payload.id,
         'queueSize': _messageQueue.size,
       });
+
+      // Automatically trigger uplink if internet is available
+      if (_connectivityMonitor.currentStatus != ConnectivityStatus.none && !_isUplinking) {
+        triggerUplink();
+      }
     } catch (e) {
       _logger.e('Failed to add message to queue: $e');
     }
@@ -328,6 +418,7 @@ class RelayManager {
   /// Dispose resources
   Future<void> dispose() async {
     await _payloadSubscription?.cancel();
+    await _connectivitySubscription?.cancel();
     await _relayEventController.close();
     _logger.d('Relay manager disposed');
   }
