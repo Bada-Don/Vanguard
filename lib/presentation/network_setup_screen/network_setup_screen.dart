@@ -7,7 +7,7 @@ import '../../widgets/custom_icon_button.dart';
 import '../../widgets/custom_image_view.dart';
 import 'package:vanguard_crisis_response/core/services/permission_manager.dart';
 import 'package:vanguard_crisis_response/core/blocs/mesh_networking/mesh_networking_bloc.dart';
-import 'package:vanguard_crisis_response/core/services/nearby_service.dart';
+import 'package:vanguard_crisis_response/core/services/nearby_service.dart' as ns;
 
 class NetworkSetupScreen extends StatefulWidget {
   const NetworkSetupScreen({Key? key}) : super(key: key);
@@ -107,7 +107,7 @@ class _NetworkSetupScreenState extends State<NetworkSetupScreen> {
                               padding: EdgeInsets.only(top: 24.h, left: 16.h, right: 16.h),
                               child: _buildActivateButton(context, meshState),
                             ),
-                            if (meshState.connectionState != ConnectionState.disconnected)
+                            if (meshState.connectionState != ns.ConnectionState.disconnected)
                               Padding(
                                 padding: EdgeInsets.only(top: 16.h, left: 16.h, right: 16.h),
                                 child: SizedBox(
@@ -222,7 +222,7 @@ class _NetworkSetupScreenState extends State<NetworkSetupScreen> {
   }
 
   Widget _buildActivateButton(BuildContext context, MeshNetworkingState state) {
-    final bool isActive = state.connectionState != ConnectionState.disconnected;
+    final bool isActive = state.connectionState != ns.ConnectionState.disconnected;
     
     return SizedBox(
       width: double.infinity,

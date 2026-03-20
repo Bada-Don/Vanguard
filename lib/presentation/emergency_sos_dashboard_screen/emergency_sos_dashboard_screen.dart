@@ -6,15 +6,22 @@ import './bloc/emergency_sos_dashboard_bloc.dart';
 import './emergency_sos_dashboard_initial_page.dart';
 import './models/emergency_sos_dashboard_model.dart';
 
+import 'package:vanguard_crisis_response/core/services/payload_generator.dart';
+import 'package:vanguard_crisis_response/core/services/encryption_layer.dart';
+import 'package:vanguard_crisis_response/core/services/nearby_service.dart';
+
 class EmergencySOSDashboardScreen extends StatefulWidget {
   EmergencySOSDashboardScreen({Key? key}) : super(key: key);
 
   static Widget builder(BuildContext context) {
     return BlocProvider<EmergencySOSDashboardBloc>(
       create: (context) => EmergencySOSDashboardBloc(
-        EmergencySOSDashboardState(
+        initialState: EmergencySOSDashboardState(
           emergencySOSDashboardModelObj: EmergencySOSDashboardModel(),
         ),
+        payloadGenerator: PayloadGenerator(),
+        encryptionLayer: EncryptionLayer()..initializeKey(),
+        nearbyService: NearbyService(),
       )..add(EmergencySOSDashboardInitialEvent()),
       child: EmergencySOSDashboardScreen(),
     );

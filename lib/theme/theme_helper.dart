@@ -72,6 +72,8 @@ class LightCodeColors {
   Color get pink_900 => Color(0xFF7F1D1D);
   Color get gray_600 => Color(0xFF6B7280);
   Color get gray_900_04 => Color(0xFF1A120E);
+  Color get gray_800 => blue_gray_800;
+  Color get gray_400 => blue_gray_300;
 
   // Additional Colors
   Color get transparentCustom => Colors.transparent;

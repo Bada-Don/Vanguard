@@ -141,6 +141,12 @@ class TextStyleHelper {
     color: appTheme.blue_gray_300,
   );
 
+  TextStyle get body14RegularPublicSans => TextStyle(
+    fontSize: 14.fSize,
+    fontWeight: FontWeight.w400,
+    fontFamily: 'Public Sans',
+  );
+
   TextStyle get body12RegularPublicSans => TextStyle(
     fontSize: 12.fSize,
     fontWeight: FontWeight.w400,
